@@ -1,0 +1,4 @@
+bt-backtest>=1.1.0
+ffn>=1.0.0
+yfinance>=0.2.0
+pytest>=8.0.0
