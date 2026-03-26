@@ -5,19 +5,15 @@
 ```bash
 git clone https://github.com/apexphere/traderStack.git
 cd traderStack
-pip install -r trader/requirements.txt
-python -m pytest trader/test/ -v    # 55 tests, should all pass
-./trader/setup                       # symlink skills for local testing
+pip install -r requirements.txt
+python -m pytest test/ -v            # 55 tests, should all pass
+./setup                              # symlink skills for local testing
 ```
 
 ## Project layout
 
-All traderStack code lives in `trader/`. The root also contains gstack files
-from the upstream fork — those are kept for reference but are not part of
-traderStack.
-
 ```
-trader/
+traderStack/
 ├── {skill-name}/SKILL.md    # Skill templates (read by Claude Code)
 ├── backtest/templates/       # Python strategy archetypes
 ├── lib/                      # Shared Python libraries
@@ -31,7 +27,7 @@ These are Markdown files read by Claude Code as prompts. Edit them directly.
 Test by running the skill in a Claude Code session.
 
 ### Python libraries (lib/)
-Write tests first. Run `python -m pytest trader/test/ -v` before committing.
+Write tests first. Run `python -m pytest test/ -v` before committing.
 
 ### Strategy templates (backtest/templates/)
 Each template is a constrained bt strategy archetype. If adding a new archetype:
@@ -43,7 +39,7 @@ Each template is a constrained bt strategy archetype. If adding a new archetype:
 ## Testing
 
 ```bash
-python -m pytest trader/test/ -v         # all tests
+python -m pytest test/ -v         # all tests
 python -m pytest trader/test/ -k "bias"  # just bias check tests
 python -m pytest trader/test/ -k "quiz"  # just quiz tests
 ```

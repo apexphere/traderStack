@@ -3,9 +3,9 @@
 ## Commands
 
 ```bash
-pip install -r trader/requirements.txt   # install Python dependencies
-python -m pytest trader/test/ -v         # run tests (55 tests, <1s)
-./trader/setup                           # symlink skills into Claude Code
+pip install -r requirements.txt      # install Python dependencies
+python -m pytest test/ -v            # run tests (55 tests, <1s)
+./setup                              # symlink skills into Claude Code
 ```
 
 ## Available Skills
@@ -20,33 +20,32 @@ python -m pytest trader/test/ -v         # run tests (55 tests, <1s)
 
 ```
 traderStack/
-├── trader/                  # All traderStack code lives here
-│   ├── setup                # Symlink skills + install deps
-│   ├── requirements.txt     # bt, ffn, yfinance, pytest
-│   ├── trader-help/
-│   │   └── SKILL.md         # Context-aware navigator
-│   ├── strategy-thesis/
-│   │   └── SKILL.md         # Adversarial thesis brainstorming
-│   ├── backtest/
-│   │   ├── SKILL.md         # bt integration + bias checks
-│   │   └── templates/       # Strategy archetype templates
-│   │       ├── momentum.py
-│   │       ├── mean_reversion.py
-│   │       └── ma_crossover.py
-│   ├── strategy-review/
-│   │   └── SKILL.md         # PASS/REVISE/REJECT gate
-│   ├── market-regime/
-│   │   └── SKILL.md         # Regime detection
-│   ├── lib/                 # Shared Python libraries
-│   │   ├── data_contract.py # Strategy Design Doc schema
-│   │   ├── bias_checks.py   # 5 bias detection checks
-│   │   ├── quiz.py          # Quiz gate (5 questions)
-│   │   ├── journal.py       # Learning journal logger
-│   │   └── graveyard.py     # Post-mortem generator
-│   └── test/                # pytest test suite
-│       ├── test_data_contract.py
-│       ├── test_quiz.py
-│       └── test_bias_checks.py
+├── setup                    # Symlink skills + install deps
+├── requirements.txt         # bt, ffn, yfinance, pytest
+├── trader-help/
+│   └── SKILL.md             # Context-aware navigator
+├── strategy-thesis/
+│   └── SKILL.md             # Adversarial thesis brainstorming
+├── backtest/
+│   ├── SKILL.md             # bt integration + bias checks
+│   └── templates/           # Strategy archetype templates
+│       ├── momentum.py
+│       ├── mean_reversion.py
+│       └── ma_crossover.py
+├── strategy-review/
+│   └── SKILL.md             # PASS/REVISE/REJECT gate
+├── market-regime/
+│   └── SKILL.md             # Regime detection
+├── lib/                     # Shared Python libraries
+│   ├── data_contract.py     # Strategy Design Doc schema
+│   ├── bias_checks.py       # 5 bias detection checks
+│   ├── quiz.py              # Quiz gate (5 questions)
+│   ├── journal.py           # Learning journal logger
+│   └── graveyard.py         # Post-mortem generator
+├── test/                    # pytest test suite
+│   ├── test_data_contract.py
+│   ├── test_quiz.py
+│   └── test_bias_checks.py
 ├── CLAUDE.md                # This file
 ├── README.md                # Project overview
 └── ARCHITECTURE.md          # Design decisions
@@ -67,7 +66,7 @@ All user state lives at `~/.traderstack/`:
 ## Testing
 
 ```bash
-python -m pytest trader/test/ -v   # run all tests
+python -m pytest test/ -v   # run all tests
 ```
 
 Tests cover: data contract validation (11 tests), quiz gate (18 tests),

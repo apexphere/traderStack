@@ -14,7 +14,7 @@ git clone https://github.com/apexphere/traderStack.git
 cd traderStack
 
 # Install skills + Python dependencies
-./trader/setup
+./setup
 
 # Start a new Claude Code session
 /trader-help
@@ -80,7 +80,7 @@ Three constrained templates for the bt backtesting library:
 
 ```bash
 # Run all tests (55 tests, ~0.05s)
-python -m pytest trader/test/ -v
+python -m pytest test/ -v
 ```
 
 Tests cover: data contract validation, quiz gate, and all 5 bias detection checks.
