@@ -1,7 +1,7 @@
 {
-  "name": "gstack",
-  "version": "0.11.19.0",
-  "description": "Garry's Stack — Claude Code skills + fast headless browser. One repo, one install, entire AI engineering workflow.",
+  "name": "traderstack",
+  "version": "1.0.0",
+  "description": "AI-powered quant trading mentor — adversarial strategy brainstorming, backtesting with bias checks, and B&H benchmarking. Built on Claude Code.",
   "license": "MIT",
   "type": "module",
   "bin": {
