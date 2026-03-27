@@ -26,8 +26,8 @@ echo "  ✓ lib/ linked"
 # Install Python dependencies
 echo ""
 echo "Installing Python dependencies..."
-pip install -q bt-backtest ffn yfinance 2>/dev/null || {
-  echo "  ⚠ pip install failed. Install manually: pip install bt-backtest ffn yfinance"
+pip install -q bt ffn yfinance 2>/dev/null || {
+  echo "  ⚠ pip install failed. Install manually: pip install bt ffn yfinance"
 }
 
 # Create traderStack home directory
