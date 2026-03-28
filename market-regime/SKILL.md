@@ -1,8 +1,8 @@
 # /market-regime — Current Market Regime Detection
 
 You are a market regime analyst. Your job is to assess the current market
-environment so the user can make informed decisions about which strategy
-archetypes are likely to perform well right now.
+regime for the assets traded in OpenQuant so the user can make informed
+decisions about which behaviors to activate or tune.
 
 ## Quiz Gate
 
@@ -12,125 +12,112 @@ archetypes are likely to perform well right now.
 
 If `QUIZ_NEEDED`: Tell the user to run `/strategy-thesis` first.
 
-## Step 1: Pull Current Market Data
+## Step 1: Identify Available Detectors
 
-Use Python with yfinance to pull recent data for key indicators:
+OpenQuant has built-in regime detectors. Read the current implementations:
+
+```bash
+cat openquant/regime/adx_detector.py
+cat openquant/regime/trend_strength_detector.py
+cat openquant/regime/volatility_detector.py
+```
+
+Three detection models:
+- **ADX + SMA** — trending/ranging × up/down (5 regimes: cold-start, trending-up, trending-down, ranging-up, ranging-down)
+- **EMA Crossover** — fast/slow EMA separation (4 regimes: cold-start, trending-up, trending-down, ranging)
+- **ATR Percentile** — volatility ranking (4 regimes: cold-start, high-volatility, low-volatility, normal)
+
+## Step 2: Run a Recent Backtest for Regime Classification
+
+The most reliable way to see the current regime is to backtest a composite
+strategy over a recent window and inspect the regime log:
+
+```bash
+.venv/bin/jesse backtest RegimeRouterV2 \
+  --start {30_days_ago} --finish {today} \
+  --json-output
+```
+
+The backtest output includes the regime log — every regime transition with
+timestamps. The LAST entry is the current detected regime.
+
+Alternatively, if the user wants a quick read without a full backtest, use
+Python directly with the candle data:
 
 ```python
-import yfinance as yf
-
-# Key indicators
-spy = yf.download("SPY", period="1y")["Close"]
-vix = yf.download("^VIX", period="1y")["Close"]
-tlt = yf.download("TLT", period="1y")["Close"]  # Long-term treasury (yield curve proxy)
+from openquant.regime import ADXRegimeDetector
+import openquant.indicators as ta
+# ... load recent candles from DB and run detect()
 ```
 
-Compute:
-- SPY 3-month return (trend direction)
-- SPY 20-day realized volatility (vol regime)
-- VIX level (fear gauge)
-- VIX percentile (relative to 1-year range)
-- SPY distance from 52-week high
-- TLT trend (rate environment proxy)
+## Step 3: Classify and Report
 
-## Step 2: Classify Regime (2-axis model)
-
-Regime classification uses TWO independent axes:
+Present the regime classification:
 
 ```
-AXIS 1: DIRECTION (trending vs ranging)
-  Trending = ADX(14) > 25 (strong directional move)
-  Ranging  = ADX(14) <= 25 (no clear trend, price oscillates)
+CURRENT MARKET REGIME (BTC-USDT)
+Date: {today}
+Detector: {which detector was used}
 
-AXIS 2: BIAS (up vs down)
-  Up   = SPY 3-month return > 0% AND price > 50-day SMA
-  Down = SPY 3-month return < 0% AND price < 50-day SMA
-```
-
-This produces 4 regimes:
-
-```
-                    TRENDING (ADX > 25)       RANGING (ADX <= 25)
-                ┌─────────────────────────┬─────────────────────────┐
-  UP BIAS       │  TRENDING UP            │  RANGING UP             │
-  (ret > 0,     │  Strong bull run.       │  Choppy drift higher.   │
-   price > SMA) │  → Momentum, trend-     │  → Mean reversion,      │
-                │    following, breakout   │    range-bound, sell    │
-                │  → AVOID: mean reversion│    premium strategies   │
-                │                         │  → AVOID: momentum      │
-                ├─────────────────────────┼─────────────────────────┤
-  DOWN BIAS     │  TRENDING DOWN          │  RANGING DOWN           │
-  (ret < 0,     │  Crash / bear market.   │  Slow bleed, choppy.    │
-   price < SMA) │  → Defensive, inverse,  │  → Mean reversion with  │
-                │    volatility strategies │    tight stops, reduced │
-                │  → AVOID: buy-the-dip   │    position sizing      │
-                │    (falling knife)       │  → AVOID: aggressive    │
-                │                         │    trend-following       │
-                └─────────────────────────┴─────────────────────────┘
-```
-
-Compute ADX(14) using the standard formula:
-1. Calculate +DM, -DM from daily highs/lows
-2. Smooth with 14-period Wilder smoothing
-3. Calculate DI+, DI-, DX, then ADX as 14-period smoothed DX
-
-**Epistemic humility:** "This 2-axis classification is a simplification. Real
-regimes blend and transition — markets don't announce when they shift. For more
-rigorous regime detection, research: Hidden Markov Models for regime classification
-(search: 'HMM regime detection finance'), or JP Morgan's Macro Regime Framework.
-The ADX thresholds (25) and SMA period (50-day) are conventional defaults that
-may not be optimal for your specific strategy."
-
-**Epistemic humility:** "This classification is a rough heuristic based on
-common quant wisdom. It will be wrong sometimes — regimes don't announce
-themselves. For more rigorous regime detection, research: Hidden Markov Models
-for regime classification (search: 'HMM regime detection finance'),
-or JP Morgan's Macro Regime Framework."
-
-## Step 3: Report
-
-Present:
-```
-CURRENT MARKET REGIME: [TRENDING UP / TRENDING DOWN / RANGING UP / RANGING DOWN]
-Date: [today]
+Classification: {TRENDING-UP / TRENDING-DOWN / RANGING-UP / RANGING-DOWN / etc.}
 
 Indicators:
-  SPY 3-month return:  X%
-  SPY vs 50-day SMA:   above / below (by X%)
-  ADX(14):             X  [trending if >25, ranging if <=25]
-  SPY 20-day vol:      X%
-  VIX level:           X
-  VIX 1y percentile:   Xth
-  SPY vs 52w high:     -X%
-  TLT 3-month trend:   up/down/flat
+  ADX(14):              X  [trending if >25, ranging if ≤25]
+  Price vs SMA(42):     above / below (by X%)
+  Fast EMA vs Slow EMA: spread X% [trending if >0.5% separation]
+  ATR percentile:       Xth [high-vol if >75th, low-vol if <25th]
 
-Regime implications for each archetype:
-  Momentum / trend-following:  [strong fit / neutral / poor fit] — [why]
-  Mean reversion:              [strong fit / neutral / poor fit] — [why]
-  MA crossover:                [strong fit / neutral / poor fit] — [why]
+Regime implications for OpenQuant behaviors:
+  TrendPullbackBehavior:     [active / inactive] — [why]
+  BBMeanReversionBehavior:   [active / inactive] — [why]
+  BreakoutBehavior:          [active / inactive] — [why]
+  TrendFollowBehavior:       [active / inactive] — [why]
 
-What to AVOID in this regime:
-  [specific strategies that historically fail in this regime]
-
-B&H context:
-  SPY buy-and-hold return (same 3m period): X%
-  "Your strategy must beat this to justify its complexity."
-
-CAVEAT: This is a rough heuristic, not a prediction. The market can
-change regime at any time. ADX transitions are gradual — the boundary
-between trending and ranging is fuzzy, not a hard line.
+Recent regime history (last 30 days):
+  {list regime transitions from the regime log}
 ```
 
-## Step 4: Journal Entry
+## Step 4: Regime-Specific Recommendations
 
-Append to journal: market regime snapshot with date, indicators, classification.
+Based on the detected regime, advise which OpenQuant behaviors fit:
+
+```
+                    TRENDING (ADX > 25)         RANGING (ADX ≤ 25)
+                ┌───────────────────────────┬───────────────────────────┐
+  UP BIAS       │  TRENDING UP              │  RANGING UP               │
+                │  → TrendPullbackBehavior  │  → BBMeanReversionBehavior│
+                │  → BreakoutBehavior       │  → Tight stops, fade      │
+                │  AVOID: mean reversion    │    extremes               │
+                │                           │  AVOID: momentum/breakout │
+                ├───────────────────────────┼───────────────────────────┤
+  DOWN BIAS     │  TRENDING DOWN            │  RANGING DOWN             │
+                │  → TrendPullbackShort     │  → BBMeanReversion with   │
+                │  → Reduce size or flat    │    reduced sizing          │
+                │  AVOID: buy-the-dip       │  AVOID: aggressive trend  │
+                └───────────────────────────┴───────────────────────────┘
+```
+
+**Epistemic humility:** "This classification is a simplification. Crypto
+regimes shift faster than equities — a trending market can reverse within
+hours. The ADX threshold (25) and EMA periods are conventional defaults.
+The regime detector has confirmation bars to prevent whipsaw, but transitions
+are still fuzzy, not hard lines."
+
+## Step 5: Journal Entry
+
+Append to `~/.traderstack/journal.md`:
+- Market regime snapshot with date, detector used, classification
+- Key indicator values
+- Which behaviors are currently appropriate
 
 Tell the user: "Market regime assessed. Run `/strategy-thesis` to brainstorm
-a strategy that fits the current environment."
+a strategy that fits the current environment, or `/backtest` to test an
+existing strategy."
 
 ## Important Rules
 
-- Always include the epistemic humility caveat.
+- Use OpenQuant's built-in detectors — don't reimplement ADX or EMA logic
+- Reference actual behaviors from `openquant.regime.behaviors`, not generic archetypes
+- This skill is informational only — it doesn't gate or block anything
+- Always include the epistemic humility caveat
 - Never claim to predict the market. This is classification, not forecasting.
-- If VIX data is unavailable, skip VIX-based classification and note it.
-- This skill is informational only — it doesn't gate or block anything.

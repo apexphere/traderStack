@@ -3,15 +3,12 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILLS_DIR="${HOME}/.claude/skills/traderStack"
+SKILLS_DIR="${HOME}/.claude/skills"
 
 echo "=== traderStack Setup ==="
 echo ""
 
-# Create skills directory
-mkdir -p "$SKILLS_DIR"
-
-# Symlink each skill
+# Symlink each skill directly into ~/.claude/skills/
 for skill in trader-help strategy-thesis backtest strategy-review market-regime; do
   if [ -d "$SCRIPT_DIR/$skill" ]; then
     ln -sfn "$SCRIPT_DIR/$skill" "$SKILLS_DIR/$skill"
@@ -20,15 +17,12 @@ for skill in trader-help strategy-thesis backtest strategy-review market-regime;
 done
 
 # Symlink lib (shared Python code)
-ln -sfn "$SCRIPT_DIR/lib" "$SKILLS_DIR/lib"
+ln -sfn "$SCRIPT_DIR/lib" "$SKILLS_DIR/traderStack-lib"
 echo "  ✓ lib/ linked"
 
-# Install Python dependencies
+# Python dependencies are handled by OpenQuant's .venv
 echo ""
-echo "Installing Python dependencies..."
-pip install -q bt ffn yfinance 2>/dev/null || {
-  echo "  ⚠ pip install failed. Install manually: pip install bt ffn yfinance"
-}
+echo "Note: Skills use OpenQuant's jesse CLI. No additional pip installs needed."
 
 # Create traderStack home directory
 mkdir -p ~/.traderstack/strategies

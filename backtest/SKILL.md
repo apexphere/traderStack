@@ -1,8 +1,12 @@
 # /backtest — Run Strategy Against Historical Data
 
-You are a rigorous backtesting engine operator. Your job is to take a Strategy
-Design Doc, generate testable code using the bt library, run it across multiple
-market regimes, and check for common biases.
+You are a rigorous backtesting engine operator. Your job is to take a strategy,
+run it against historical data using OpenQuant's CLI, and interpret the results.
+
+## Prerequisites
+
+The OpenQuant server must be running (`jesse run` on port 9000).
+The working directory is the OpenQuant project root.
 
 ## Quiz Gate
 
@@ -13,140 +17,142 @@ market regimes, and check for common biases.
 If `QUIZ_NEEDED`: Tell the user to run `/strategy-thesis` first (which includes
 the quiz). Do not proceed.
 
-## Step 1: Read the Strategy Design Doc
+## Step 1: Identify the Strategy
+
+List available strategies:
 
 ```bash
-ls -t ~/.traderstack/strategies/*.md 2>/dev/null | head -5
+ls -d strategies/*/
 ```
 
-Ask the user which strategy to backtest (or use the most recent).
-Read the file. Validate it has all required sections.
+Ask the user which strategy to backtest (or use the one they mention).
+Read the strategy code to understand what it does:
 
-If the `## Backtest Results` section already exists, ask:
-"This strategy has already been backtested. Re-run? (This will overwrite results.)"
+```bash
+cat strategies/{StrategyName}/__init__.py
+cat strategies/{StrategyName}/config.yaml 2>/dev/null
+```
 
-## Step 2: Map to Archetype
+If the strategy has a `thesis.md`, read it for context:
 
-Read the Entry Rules and Exit Rules from the design doc. Map to one of the
-supported archetypes:
+```bash
+cat strategies/{StrategyName}/thesis.md 2>/dev/null
+```
 
-1. **Momentum** — Buy assets with positive recent returns, sell losers
-2. **Mean Reversion** — Buy oversold assets, sell overbought
-3. **Moving Average Crossover** — Buy when short MA > long MA, sell on cross-under
+## Step 2: Run the Backtest
 
-If the strategy doesn't map to any archetype:
-"Your strategy doesn't map to a supported archetype.
-Supported: momentum, mean reversion, MA crossover.
-Refine your thesis in /strategy-thesis or add a new archetype template."
-STOP.
+Run the strategy using the OpenQuant CLI:
 
-## Step 3: Generate Strategy Code
+```bash
+.venv/bin/jesse backtest {StrategyName} \
+  --start {start_date} --finish {finish_date} \
+  --json-output
+```
 
-Using the archetype template from `trader/backtest/templates/`, generate a
-bt-compatible Python strategy. The code should:
-- Use `bt` library for the backtest engine
-- Use `yfinance` to download data
-- Use `ffn` for metrics (Sharpe, drawdown, etc.)
-- Parameterize from the design doc (tickers, thresholds, timeframes)
+**Default date ranges** (use the user's if specified, otherwise suggest):
+- Full available range: 2025-06-01 to 2026-03-26 (BTC-USDT)
+- Sensible default: most recent 6 months
 
-**Universe cap:** Maximum 50 tickers. If the design doc specifies more, warn
-and cap: "Universe capped at 50 tickers to prevent memory issues."
+**If the strategy is composite** (uses regime detection), a single backtest
+already covers all regimes — the detector classifies each bar and routes to
+the appropriate behavior automatically. No need for separate regime runs.
 
-Write the generated code to `~/.traderstack/strategies/{name}-generated.py`.
-
-Present the FULL code to the user. Ask:
-"Review the generated code above. Does it match your strategy?
-Type 'run' to execute, or describe changes you want made."
-
-Do NOT run without user confirmation. This review step is mandatory.
-
-## Step 4: Execute Across Regimes
-
-Run the strategy across these market periods:
-
-| Regime | Period | Why |
-|--------|--------|-----|
-| Bull | 2013-01-01 to 2019-12-31 | Post-GFC recovery, low volatility |
-| Bear/Crisis | 2007-01-01 to 2009-12-31 | Global Financial Crisis |
-| Sideways/Volatile | 2022-01-01 to 2022-12-31 | Rate hike regime |
-| Out-of-Sample | Most recent 12 months | Never used in development |
-
-For each regime:
-1. Download data via yfinance
-2. Run the bt strategy
-3. Run a **buy-and-hold SPY benchmark** over the SAME period (automatic)
-4. Compute for BOTH: total return, Sharpe ratio, max drawdown, number of trades
-5. Handle errors:
-   - Ticker not found → clear error, suggest alternatives
-   - Data gaps (>5% NaN) → warn before proceeding
-   - Network timeout → retry once, then fail with explanation
-
-**Code generation failure handling:**
-If the generated code fails to import or run:
+**If the backtest fails:**
 1. Surface the raw error with a plain-language explanation
-2. Offer to re-generate once
-3. If it fails again: "Code generation failed. Open
-   `~/.traderstack/strategies/{name}-generated.py` and fix manually,
-   then ask me to re-run."
+2. Check common issues: server not running, strategy import errors, date range
+   outside available data (BTC: 2024-11-01 to 2026-03-26, ETH: 2024-06-01 to 2026-03-12)
+3. With 210-candle warmup on daily timeframe, earliest usable start is ~2025-06-01
 
-## Step 5: Run Bias Checks
+## Step 3: Retrieve and Present Results
 
-Run all 5 bias checks (see `trader/lib/bias_checks.py`):
+```bash
+.venv/bin/jesse results --json-output
+```
 
-1. **Lookahead Bias** — Regex lint on the generated code
-2. **Survivorship Bias** — WARNING (Yahoo Finance limitation)
-3. **Overfitting** — Compare IS vs OOS Sharpe (70/30 split within bull period)
-4. **Regime Robustness** — Must be positive in >= 2 of 3 in-sample regimes
-5. **Sample Size** — Minimum 100 trades total
+Pick the most recent session (or the one just created). Get detailed results:
 
-For each check: report PASS / WARN / FAIL with explanation.
+```bash
+.venv/bin/jesse results {session-id} --json-output
+```
 
-**Every backtest includes this mandatory warning:**
-"IMPORTANT: Bias detection is heuristic-only for lookahead, and survivorship
-bias cannot be tested with Yahoo Finance data. Review your strategy logic
-manually and consider upgrading to Tiingo or Polygon.io for delisted ticker
-coverage."
+Present results clearly:
+- Total return, Sharpe ratio, Sortino ratio, max drawdown
+- Win rate, number of trades, profit factor
+- If composite: regime breakdown (time in each regime, trades per regime)
 
-## Step 6: Append Results to Design Doc
+## Step 4: Run Bias Checks
 
-Append the backtest results to the Strategy Design Doc:
+Evaluate the results for common biases:
+
+### 4.1 Overfitting Check
+If the user wants to validate robustness, run optimize with train/test split:
+
+```bash
+.venv/bin/jesse optimize {StrategyName} \
+  --training-start 2025-06-01 --training-finish 2025-12-31 \
+  --testing-start 2026-01-01 --testing-finish 2026-03-26 \
+  --trials 50 --objective sharpe
+```
+
+Compare training vs testing Sharpe. If testing Sharpe < 50% of training, likely overfit.
+
+### 4.2 Sample Size
+- < 30 trades: FAIL — insufficient for any statistical conclusion
+- 30-100 trades: WARN — marginal, results may not be reliable
+- 100+ trades: PASS — sufficient for basic significance
+
+### 4.3 Regime Robustness (for composite strategies)
+- Check the regime log — is performance concentrated in one regime?
+- If >80% of profit comes from one regime, the other behaviors may be dead weight
+
+### 4.4 Zero-Trade Check
+- If 0 trades: entry conditions too strict, or warmup insufficient
+- Common fix: loosen filters, check that indicator timeframes are in data_routes
+
+**Mandatory warning:**
+"These bias checks are heuristic. Backtests on crypto data from 2024-2026 cover
+a limited set of market conditions. Forward-test (paper trade) before risking
+real capital."
+
+## Step 5: Append Results to Thesis Doc (if it exists)
+
+If the strategy has a `thesis.md`, append backtest results:
 
 ```markdown
 ## Backtest Results
-### Regime Performance
-| Regime | Period | Strategy Return | Strategy Sharpe | Strategy DD | B&H Return | B&H Sharpe | B&H DD | Trades |
-| Bull | 2013-2019 | X% | X.XX | -X% | X% | X.XX | -X% | N |
-| Bear | 2007-2009 | X% | X.XX | -X% | X% | X.XX | -X% | N |
-| Sideways | 2022 | X% | X.XX | -X% | X% | X.XX | -X% | N |
-| OOS | recent 12m | X% | X.XX | -X% | X% | X.XX | -X% | N |
+- **Period:** {start} to {finish}
+- **Total Return:** X%
+- **Sharpe:** X.XX
+- **Max Drawdown:** -X%
+- **Trades:** N
+- **Win Rate:** X%
+
 ### Bias Checks
 | Check | Result | Notes |
-| Lookahead | PASS/WARN/FAIL | ... |
-| Survivorship | WARN | Yahoo Finance limitation |
 | Overfitting | PASS/WARN/FAIL | ... |
-| Regime | PASS/WARN/FAIL | ... |
 | Sample Size | PASS/WARN/FAIL | ... |
+| Regime Robustness | PASS/WARN/FAIL | ... |
+
+### Status: BACKTESTED
 ### Generated On: {timestamp}
-### Code Path: ~/.traderstack/strategies/{name}-generated.py
 ```
 
-Update Status from DRAFT to BACKTESTED.
-
-## Step 7: Journal Entry
+## Step 6: Journal Entry
 
 Append to `~/.traderstack/journal.md`:
 - Strategy name, Skill: /backtest
-- Outcome: backtested (list regime results)
-- What happened: which regimes passed/failed, which biases flagged
-- What the AI caught: any bias check warnings
+- Outcome: backtested (key metrics)
+- What happened: which checks passed/failed
+- What the AI caught: any warnings or issues
 
-Tell the user: "Backtest complete. Results appended to design doc.
-Next step: run `/strategy-review` to evaluate if this strategy is ready."
+Tell the user: "Backtest complete. Results stored in OpenQuant DB and visible
+at http://localhost:9000. Next step: run `/strategy-review` to evaluate
+if this strategy is ready."
 
 ## Important Rules
 
-- NEVER skip the code review step (Step 3). User must confirm before execution.
-- Cap universe at 50 tickers. No exceptions.
-- Every run includes the heuristic-only warning.
-- If ANY bias check is FAIL, prominently warn: "This strategy has a critical
-  bias issue. Strongly recommend revising before /strategy-review."
+- Use `jesse backtest` — NEVER write standalone Python backtest scripts
+- A single composite strategy backtest covers all regimes automatically
+- Results are stored in PostgreSQL and visible in the web dashboard
+- Always check the server is running before attempting a backtest
+- Use `--json-output` when you need to parse results programmatically
