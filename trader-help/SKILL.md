@@ -29,12 +29,12 @@ echo "RECENT BACKTESTS:"
 .venv/bin/jesse results --limit 5 2>/dev/null || echo "  Server not running or no results"
 
 # Graveyard (rejected strategies)
-GRAVE_COUNT=$(ls ~/.traderstack/graveyard/*.md 2>/dev/null | wc -l | tr -d ' ')
+GRAVE_COUNT=$(ls storage/graveyard/*.md 2>/dev/null | wc -l | tr -d ' ')
 echo "GRAVEYARD: $GRAVE_COUNT rejected strategies"
 
 # Journal
-[ -f ~/.traderstack/journal.md ] && {
-  JOURNAL_ENTRIES=$(grep -c "^## " ~/.traderstack/journal.md 2>/dev/null || echo 0)
+[ -f storage/journal.md ] && {
+  JOURNAL_ENTRIES=$(grep -c "^## " storage/journal.md 2>/dev/null || echo 0)
   echo "JOURNAL: $JOURNAL_ENTRIES entries"
 } || echo "JOURNAL: EMPTY"
 

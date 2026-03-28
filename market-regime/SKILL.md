@@ -17,13 +17,15 @@ If `QUIZ_NEEDED`: Tell the user to run `/strategy-thesis` first.
 OpenQuant has built-in regime detectors. Read the current implementations:
 
 ```bash
+cat openquant/regime/ema_adx_detector.py
 cat openquant/regime/adx_detector.py
 cat openquant/regime/trend_strength_detector.py
 cat openquant/regime/volatility_detector.py
 ```
 
-Three detection models:
-- **ADX + SMA** — trending/ranging × up/down (5 regimes: cold-start, trending-up, trending-down, ranging-up, ranging-down)
+Four detection models:
+- **EMA + ADX (MACD)** — EMA direction + asymmetric MACD energy confirmation (5 regimes: cold-start, trending-up, trending-down, ranging-up, ranging-down). **Recommended for crypto** — fastest to detect trend transitions.
+- **ADX + SMA** — ADX trend strength + SMA direction (5 regimes: cold-start, trending-up, trending-down, ranging-up, ranging-down). Laggy for crypto — ADX takes 2-3 weeks to detect trend ends.
 - **EMA Crossover** — fast/slow EMA separation (4 regimes: cold-start, trending-up, trending-down, ranging)
 - **ATR Percentile** — volatility ranking (4 regimes: cold-start, high-volatility, low-volatility, normal)
 
@@ -105,7 +107,7 @@ are still fuzzy, not hard lines."
 
 ## Step 5: Journal Entry
 
-Append to `~/.traderstack/journal.md`:
+Append to `storage/journal.md`:
 - Market regime snapshot with date, detector used, classification
 - Key indicator values
 - Which behaviors are currently appropriate

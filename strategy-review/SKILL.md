@@ -128,14 +128,14 @@ If the strategy has a `thesis.md`, update its Status:
 Append journal entry with the review outcome and key findings.
 
 ### On REJECT:
-Write a graveyard post-mortem to `~/.traderstack/graveyard/`:
+Write a graveyard post-mortem to `storage/graveyard/`:
 - Strategy name and thesis
 - Why it failed (which thresholds missed)
 - What the user should learn from this failure
 
 Append journal entry noting the rejection.
 
-Tell the user: "Post-mortem written to ~/.traderstack/graveyard/{name}.md.
+Tell the user: "Post-mortem written to storage/graveyard/{name}.md.
 Your failures are your best teachers — read them before your next thesis."
 
 ## Step 6: Next Steps

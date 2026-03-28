@@ -139,7 +139,7 @@ If the strategy has a `thesis.md`, append backtest results:
 
 ## Step 6: Journal Entry
 
-Append to `~/.traderstack/journal.md`:
+Append to `storage/journal.md`:
 - Strategy name, Skill: /backtest
 - Outcome: backtested (key metrics)
 - What happened: which checks passed/failed

@@ -36,7 +36,7 @@ ls openquant/regime/behaviors/
 ```
 
 The user's strategy will be built as an OpenQuant CompositeStrategy with:
-- A **regime detector** (ADX, EMA crossover, or ATR volatility)
+- A **regime detector** (EMA+ADX/MACD recommended, also ADX, EMA crossover, or ATR volatility)
 - **Behaviors** mapped to each regime (pullback, BB mean-reversion, breakout, trend-follow)
 - **Quality filters** gating entry quality
 - **Hyperparameters** tunable via optimize
@@ -153,37 +153,20 @@ Write `strategies/{StrategyName}/thesis.md`:
 
 ### 5b: Scaffold the OpenQuant Strategy
 
-Write `strategies/{StrategyName}/__init__.py`:
+Use the CLI scaffold command:
 
-```python
-from openquant.regime import CompositeStrategy
-
-
-class {StrategyName}(CompositeStrategy):
-    config_file = 'config.yaml'
+```bash
+.venv/bin/jesse new-strategy {StrategyName}
 ```
 
-Write `strategies/{StrategyName}/config.yaml` based on the thesis:
+This generates `strategies/{StrategyName}/` with `__init__.py`, `config.yaml`,
+and `thesis.md` template. Then customize `config.yaml` based on the thesis:
 
-```yaml
-detector:
-  type: {adx|trend_strength|volatility}
-  params:
-    # filled from thesis
+- Set the detector type (`ema_adx` recommended for crypto)
+- Map regimes to behaviors from the thesis
+- Fill in hyperparameter defaults from the thesis's entry/exit rules
 
-regimes:
-  trending-up: {behavior_name}
-  trending-down: {behavior_name_or_null}
-  ranging: {behavior_name}
-  cold-start: null
-
-transitions:
-  on_switch: close_all
-  cooldown_bars: 8
-
-hyperparameters:
-  # filled from thesis — entry/exit thresholds, indicator periods, risk sizing
-```
+Replace the generated `thesis.md` template with the thesis doc from Phase 5a.
 
 Tell the user: "Strategy scaffolded at `strategies/{StrategyName}/`.
 Thesis doc, code, and config are ready.
@@ -191,7 +174,7 @@ Next step: run `/backtest` to test against historical data."
 
 ## Phase 6: Journal Entry
 
-Append to `~/.traderstack/journal.md`:
+Append to `storage/journal.md`:
 - Strategy name
 - Skill: /strategy-thesis
 - Outcome: Design doc + strategy scaffolded
